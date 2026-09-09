@@ -29,15 +29,15 @@ def find_link_by_keywords(soup: BeautifulSoup, base_url: str, keywords: list) ->
     keywords_upper = [k.upper() for k in keywords]
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        if not href.lower().endswith((".pdf", ".xls", ".xlsx")):
+        path_only = href.split("?")[0].split("#")[0]
+        if not path_only.lower().endswith((".pdf", ".xls", ".xlsx", ".docx")):
             continue
         text = a.get_text(strip=True).upper()
-        filename = href.split("/")[-1].upper()
+        filename = path_only.split("/")[-1].upper()
         combined = text + " " + filename
         if any(k in combined for k in keywords_upper):
             return urljoin(base_url, href)
     return None
-
 
 def find_all_target_links(config: dict) -> dict:
     """Visit tax_sale and excess_funds pages, return dict of source_type -> pdf_url (or None)."""
