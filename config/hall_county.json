@@ -1,0 +1,15 @@
+{
+  "county_id": "hall_county_ga",
+  "county_name": "Hall County, GA",
+  "base_url": "https://hallcountytax.org",
+  "pages": {
+    "tax_sale": "https://hallcountytax.org/property/tax-sale/",
+    "excess_funds": "https://hallcountytax.org/property/excess-funds/"
+  },
+  "link_keywords": {
+    "tax_sale_listing": ["TAX SALE LISTING", "DELINQUENT TAX"],
+    "excess_funds_list": ["TAX SALE EXCESS FUNDS", "EXCESS FUNDS"],
+    "unclaimed_refunds": ["UNCLAIMED TAX", "COMMISSIONER REFUNDS"]
+  },
+  "min_excess_amount": 10000
+}
