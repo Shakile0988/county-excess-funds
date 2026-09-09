@@ -5,7 +5,12 @@ on:
     types: [monthly-scrape]
   schedule:
     - cron: "0 3 1 * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      check_history:
+        description: "Skip files already processed before (uncheck to force reprocess everything)"
+        type: boolean
+        default: true
 
 jobs:
   scrape:
@@ -22,6 +27,7 @@ jobs:
       - run: python src/main.py
         env:
           N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          CHECK_HISTORY: ${{ github.event.inputs.check_history || 'true' }}
 
       - name: Commit updated state (dedupe tracker)
         run: |
