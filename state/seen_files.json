@@ -12,7 +12,9 @@
   },
   "brantley_county_ga": {
     "tax_sale_listing": [],
-    "excess_funds_list": [],
+    "excess_funds_list": [
+      "d4454bc71dc72c46e042924b594f89797e47ca6e7239415f5ca4c51d33d217e5"
+    ],
     "unclaimed_refunds": []
   }
 }
