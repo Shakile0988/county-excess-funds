@@ -1,0 +1,30 @@
+{
+  "county_id": "brantley_county_ga",
+  "county_name": "Brantley County, GA",
+  "base_url": "https://brantleytax.com",
+  "pages": {
+    "tax_sale": "https://brantleytax.com/content/1336.html",
+    "excess_funds": "https://brantleytax.com/content/1336.html"
+  },
+  "link_keywords": {
+    "tax_sale_listing": ["RP TAX SALE", "MH TAX SALE", "TAX SALE PROPERTIES"],
+    "excess_funds_list": ["EXCESS FUNDS"],
+    "unclaimed_refunds": ["UNCLAIMED REFUND", "UNCLAIMED PROPERTY"]
+  },
+  "min_excess_amount": 10000,
+  "columns": {
+    "excess_funds_list": ["SALE DATE", "OWNER OF RECORD", "LAST KNOWN ADDRESS", "CITY, STATE, ZIP", "MAP CODE", "YEARS", "BID PRICE", "TAXES", "EXCESS BID"],
+    "tax_sale_listing": ["MAP CODE", "OWNER", "PROPERTY ADDRESS", "OPENING BID"],
+    "unclaimed_refunds": ["ACCOUNT", "CHECK #", "DATE", "AMOUNT", "PAYEE", "ADDRESS"]
+  },
+  "fields": {
+    "tax_sale_listing": {"name_field": "OWNER", "amount_field": null, "filter_min_amount": false},
+    "excess_funds_list": {"name_field": "OWNER OF RECORD", "amount_field": "EXCESS BID", "filter_min_amount": true},
+    "unclaimed_refunds": {"name_field": "PAYEE", "amount_field": "AMOUNT", "filter_min_amount": false}
+  },
+  "group_labels": {
+    "tax_sale_listing": "Tax Sale",
+    "excess_funds_list": "Excess Funds",
+    "unclaimed_refunds": "Unclaimed Refunds"
+  }
+}
