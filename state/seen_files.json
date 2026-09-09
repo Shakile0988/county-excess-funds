@@ -9,5 +9,10 @@
     "unclaimed_refunds": [
       "83fa7e96932cc16b3843e34588363b146da644c93d6ec8aede77053dc231038e"
     ]
+  },
+  "brantley_county_ga": {
+    "tax_sale_listing": [],
+    "excess_funds_list": [],
+    "unclaimed_refunds": []
   }
 }
