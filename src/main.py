@@ -2,7 +2,7 @@
 Entry point run by GitHub Actions (triggered by n8n via repository_dispatch,
 or by the monthly cron schedule).
 
-Flow (per the county site):
+Flow (per each county site):
   1. Visit the site, check Tax Sale for a new file -> if present, store it.
   2. Check Excess Funds for a new file -> if present, store it.
   3. Check Unclaimed Refunds for a new file -> if present, store it.
@@ -10,10 +10,12 @@ Flow (per the county site):
        - Tax Sale / Excess Funds: keep only leads >= $10,000, drop the rest.
        - Unclaimed Refunds: no dollar filter, just split directly.
        - Split what's left into Persons vs Others (LLC/company/Inc/etc).
-  5. Build 6 labeled groups (2 per source: "<Source> - Persons" /
-     "<Source> - Others"), and send them ALL to n8n in ONE webhook call -
-     not once per source.
+  5. Build labeled groups (2 per source: "<Source> - Persons" /
+     "<Source> - Others"), and send them ALL to n8n in ONE webhook call
+     per county - not once per source.
   6. Record each processed file's hash so it isn't re-sent next run.
+  7. Repeat for every county config in config/ - one GitHub Action run
+     processes all counties in sequence.
 """
 
 import json
@@ -103,10 +105,20 @@ def run(config_path: str, webhook_url: str, check_history: bool) -> None:
 
 
 if __name__ == "__main__":
-    cfg_path = os.path.join(BASE_DIR, "config", "hall_county.json")
+    config_dir = os.path.join(BASE_DIR, "config")
     webhook = os.environ.get("N8N_WEBHOOK_URL")
     if not webhook:
         print("N8N_WEBHOOK_URL env var missing", file=sys.stderr)
         sys.exit(1)
     check_history = os.environ.get("CHECK_HISTORY", "true").strip().lower() != "false"
-    run(cfg_path, webhook, check_history)
+
+    for fname in sorted(os.listdir(config_dir)):
+        if not fname.endswith(".json"):
+            continue
+        cfg_path = os.path.join(config_dir, fname)
+        print(f"=== Processing {fname} ===")
+        try:
+            run(cfg_path, webhook, check_history)
+        except Exception as e:
+            print(f"[error] {fname} failed: {e}", file=sys.stderr)
+            continue
