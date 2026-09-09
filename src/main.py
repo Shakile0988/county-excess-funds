@@ -4,7 +4,8 @@ or by the monthly cron schedule).
 
 For each source (tax sale listing, excess funds list, unclaimed refunds):
   1. Locate the current PDF link on the county site.
-  2. Skip it if its content hash was already processed before (dedupe).
+  2. Skip it if its content hash was already processed before (dedupe) -
+     unless CHECK_HISTORY is turned off, in which case reprocess anyway.
   3. Parse the PDF table.
   4. Filter by min excess amount + split person vs company (skipped for the
      upcoming tax-sale listing, which has no dollar amount yet).
@@ -43,7 +44,7 @@ def save_state(state: dict) -> None:
         json.dump(state, f, indent=2)
 
 
-def run(config_path: str, webhook_url: str) -> None:
+def run(config_path: str, webhook_url: str, check_history: bool) -> None:
     with open(config_path, "r") as f:
         config = json.load(f)
 
@@ -60,15 +61,19 @@ def run(config_path: str, webhook_url: str) -> None:
 
         local_path, file_hash = download_file(url, DOWNLOAD_DIR)
 
-        if file_hash in state[county_id][source_type]:
+        if check_history and file_hash in state[county_id][source_type]:
             print(f"[skip] {source_type} already processed (hash matches)")
             continue
+        elif not check_history and file_hash in state[county_id][source_type]:
+            print(f"[force] {source_type} hash matches but history check is off, reprocessing")
 
-        records = parse_pdf_table(local_path)
+        columns = config["columns"][source_type]
+        records = parse_pdf_table(local_path, columns)
         if not records:
             print(f"[skip] {source_type} downloaded but no table found (likely 'coming soon')")
             # Still remember the hash so we don't re-download an unchanged empty file
-            state[county_id][source_type].append(file_hash)
+            if file_hash not in state[county_id][source_type]:
+                state[county_id][source_type].append(file_hash)
             continue
 
         if source_type in SOURCE_FIELD_MAP:
@@ -86,7 +91,8 @@ def run(config_path: str, webhook_url: str) -> None:
             send_to_n8n(webhook_url, county_id, source_type, persons=[], companies=[], raw_records=records)
             print(f"[sent] {source_type}: {len(records)} raw upcoming listings")
 
-        state[county_id][source_type].append(file_hash)
+        if file_hash not in state[county_id][source_type]:
+            state[county_id][source_type].append(file_hash)
 
     save_state(state)
 
@@ -97,4 +103,5 @@ if __name__ == "__main__":
     if not webhook:
         print("N8N_WEBHOOK_URL env var missing", file=sys.stderr)
         sys.exit(1)
-    run(cfg_path, webhook)
+    check_history = os.environ.get("CHECK_HISTORY", "true").strip().lower() != "false"
+    run(cfg_path, webhook, check_history)
