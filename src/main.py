@@ -2,15 +2,18 @@
 Entry point run by GitHub Actions (triggered by n8n via repository_dispatch,
 or by the monthly cron schedule).
 
-For each source (tax sale listing, excess funds list, unclaimed refunds):
-  1. Locate the current PDF link on the county site.
-  2. Skip it if its content hash was already processed before (dedupe) -
-     unless CHECK_HISTORY is turned off, in which case reprocess anyway.
-  3. Parse the PDF table.
-  4. Filter by min excess amount + split person vs company (skipped for the
-     upcoming tax-sale listing, which has no dollar amount yet).
-  5. Send the result to n8n, persons first then companies/other.
-  6. Record the new hash in state/seen_files.json.
+Flow (per the county site):
+  1. Visit the site, check Tax Sale for a new file -> if present, store it.
+  2. Check Excess Funds for a new file -> if present, store it.
+  3. Check Unclaimed Refunds for a new file -> if present, store it.
+  4. For each source that had a file:
+       - Tax Sale / Excess Funds: keep only leads >= $10,000, drop the rest.
+       - Unclaimed Refunds: no dollar filter, just split directly.
+       - Split what's left into Persons vs Others (LLC/company/Inc/etc).
+  5. Build 6 labeled groups (2 per source: "<Source> - Persons" /
+     "<Source> - Others"), and send them ALL to n8n in ONE webhook call -
+     not once per source.
+  6. Record each processed file's hash so it isn't re-sent next run.
 """
 
 import json
@@ -20,18 +23,13 @@ import sys
 from scraper import find_all_target_links, download_file
 from parser import parse_pdf_table
 from filters import split_records
-from send_webhook import send_to_n8n
+from send_webhook import send_grouped_to_n8n
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_PATH = os.path.join(BASE_DIR, "state", "seen_files.json")
 DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 
-# Per-source field names used to find the "owner" name column and the
-# dollar amount column inside each PDF's table.
-SOURCE_FIELD_MAP = {
-    "excess_funds_list": {"name_field": "ORIGINAL OWNER", "amount_field": "EXCESS FUNDS"},
-    "unclaimed_refunds": {"name_field": "PAYEE", "amount_field": "AMOUNT"},
-}
+ALL_SOURCES = ["tax_sale_listing", "excess_funds_list", "unclaimed_refunds"]
 
 
 def load_state() -> dict:
@@ -50,11 +48,13 @@ def run(config_path: str, webhook_url: str, check_history: bool) -> None:
 
     county_id = config["county_id"]
     state = load_state()
-    state.setdefault(county_id, {"tax_sale_listing": [], "excess_funds_list": [], "unclaimed_refunds": []})
+    state.setdefault(county_id, {s: [] for s in ALL_SOURCES})
 
     links = find_all_target_links(config)
+    groups: list[dict] = []
 
-    for source_type, url in links.items():
+    for source_type in ALL_SOURCES:
+        url = links.get(source_type)
         if not url:
             print(f"[skip] no link found for {source_type}")
             continue
@@ -71,28 +71,33 @@ def run(config_path: str, webhook_url: str, check_history: bool) -> None:
         records = parse_pdf_table(local_path, columns)
         if not records:
             print(f"[skip] {source_type} downloaded but no table found (likely 'coming soon')")
-            # Still remember the hash so we don't re-download an unchanged empty file
             if file_hash not in state[county_id][source_type]:
                 state[county_id][source_type].append(file_hash)
             continue
 
-        if source_type in SOURCE_FIELD_MAP:
-            fields = SOURCE_FIELD_MAP[source_type]
-            persons, companies = split_records(
-                records,
-                fields["name_field"],
-                fields["amount_field"],
-                config["min_excess_amount"],
-            )
-            send_to_n8n(webhook_url, county_id, source_type, persons, companies)
-            print(f"[sent] {source_type}: {len(persons)} persons, {len(companies)} companies")
-        else:
-            # tax_sale_listing: upcoming sale, no $ amount filter yet, send raw
-            send_to_n8n(webhook_url, county_id, source_type, persons=[], companies=[], raw_records=records)
-            print(f"[sent] {source_type}: {len(records)} raw upcoming listings")
+        field_cfg = config["fields"][source_type]
+        min_amount = config["min_excess_amount"] if field_cfg["filter_min_amount"] else None
+        persons, others = split_records(
+            records,
+            field_cfg["name_field"],
+            field_cfg.get("amount_field"),
+            min_amount,
+        )
+
+        label = config["group_labels"][source_type]
+        groups.append({"group_name": f"{label} - Persons", "source_type": source_type, "records": persons})
+        groups.append({"group_name": f"{label} - Others", "source_type": source_type, "records": others})
+        print(f"[processed] {source_type}: {len(persons)} persons, {len(others)} others "
+              f"(filter applied: {field_cfg['filter_min_amount']})")
 
         if file_hash not in state[county_id][source_type]:
             state[county_id][source_type].append(file_hash)
+
+    if groups:
+        send_grouped_to_n8n(webhook_url, county_id, groups)
+        print(f"[sent] one combined webhook call with {len(groups)} groups")
+    else:
+        print("[info] nothing new to send this run")
 
     save_state(state)
 
