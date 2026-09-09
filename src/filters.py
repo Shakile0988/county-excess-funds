@@ -1,6 +1,6 @@
 """
-Filters parsed records by minimum excess-fund amount and splits them into
-'person' vs 'company/other' owner records.
+Filters parsed records by minimum excess-fund amount (when asked) and splits
+them into 'person' vs 'company/other' owner records.
 """
 
 import re
@@ -35,23 +35,26 @@ def parse_amount(raw: str) -> float:
 def split_records(
     records: list[dict],
     name_field: str,
-    amount_field: str,
-    min_amount: float,
+    amount_field: str | None = None,
+    min_amount: float | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    """Return (persons, companies) filtered by min_amount, amount attached as float."""
-    persons, companies = [], []
+    """Return (persons, others). If amount_field + min_amount are both given,
+    rows below min_amount are dropped first; otherwise every record is kept
+    and simply grouped into person vs company/LLC/other."""
+    persons, others = [], []
 
     for row in records:
-        amount = parse_amount(row.get(amount_field, ""))
-        if amount < min_amount:
-            continue
+        if amount_field:
+            amt = parse_amount(row.get(amount_field, ""))
+            row["_amount"] = amt
+            if min_amount is not None and amt < min_amount:
+                continue
 
-        row["_amount"] = amount
         name = row.get(name_field, "")
 
         if is_company(name):
-            companies.append(row)
+            others.append(row)
         else:
             persons.append(row)
 
-    return persons, companies
+    return persons, others
