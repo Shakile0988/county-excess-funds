@@ -1,7 +1,13 @@
 {
   "hall_county_ga": {
-    "tax_sale_listing": [],
-    "excess_funds_list": [],
-    "unclaimed_refunds": []
+    "tax_sale_listing": [
+      "d4f3e07db596368696cd020891e62127b570a49be4e41490799864b02f9bcf33"
+    ],
+    "excess_funds_list": [
+      "c2ba1311ee995f46586a06a574acf0a36b750f7e700cd4414c0e4aa4203ac650"
+    ],
+    "unclaimed_refunds": [
+      "83fa7e96932cc16b3843e34588363b146da644c93d6ec8aede77053dc231038e"
+    ]
   }
 }
