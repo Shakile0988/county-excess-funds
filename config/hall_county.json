@@ -16,5 +16,15 @@
     "excess_funds_list": ["TAX SALE DATE", "BUYER", "MAPCODE", "ORIGINAL OWNER", "PROPERTY ADDRESS", "CITY", "EXCESS FUNDS"],
     "unclaimed_refunds": ["ACCOUNT", "CHECK #", "DATE", "AMOUNT", "PAYEE", "ADDRESS"],
     "tax_sale_listing": ["MAPCODE", "OWNER", "PROPERTY ADDRESS", "OPENING BID"]
+  },
+  "fields": {
+    "tax_sale_listing": {"name_field": "OWNER", "amount_field": null, "filter_min_amount": false},
+    "excess_funds_list": {"name_field": "ORIGINAL OWNER", "amount_field": "EXCESS FUNDS", "filter_min_amount": true},
+    "unclaimed_refunds": {"name_field": "PAYEE", "amount_field": "AMOUNT", "filter_min_amount": false}
+  },
+  "group_labels": {
+    "tax_sale_listing": "Tax Sale",
+    "excess_funds_list": "Excess Funds",
+    "unclaimed_refunds": "Unclaimed Refunds"
   }
 }
