@@ -11,5 +11,10 @@
     "excess_funds_list": ["TAX SALE EXCESS FUNDS", "EXCESS FUNDS"],
     "unclaimed_refunds": ["UNCLAIMED TAX", "COMMISSIONER REFUNDS"]
   },
-  "min_excess_amount": 10000
+  "min_excess_amount": 10000,
+  "columns": {
+    "excess_funds_list": ["TAX SALE DATE", "BUYER", "MAPCODE", "ORIGINAL OWNER", "PROPERTY ADDRESS", "CITY", "EXCESS FUNDS"],
+    "unclaimed_refunds": ["ACCOUNT", "CHECK #", "DATE", "AMOUNT", "PAYEE", "ADDRESS"],
+    "tax_sale_listing": ["MAPCODE", "OWNER", "PROPERTY ADDRESS", "OPENING BID"]
+  }
 }
