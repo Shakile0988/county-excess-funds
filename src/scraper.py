@@ -25,14 +25,17 @@ def fetch_html(url: str) -> BeautifulSoup:
 
 
 def find_link_by_keywords(soup: BeautifulSoup, base_url: str, keywords: list) -> str | None:
-    """Return the first href (absolute) whose visible text matches any keyword."""
+    """Return the first href (absolute) whose visible text OR filename matches any keyword."""
     keywords_upper = [k.upper() for k in keywords]
     for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if not href.lower().endswith((".pdf", ".xls", ".xlsx")):
+            continue
         text = a.get_text(strip=True).upper()
-        if any(k in text for k in keywords_upper):
-            href = a["href"]
-            if href.lower().endswith((".pdf", ".xls", ".xlsx")):
-                return urljoin(base_url, href)
+        filename = href.split("/")[-1].upper()
+        combined = text + " " + filename
+        if any(k in combined for k in keywords_upper):
+            return urljoin(base_url, href)
     return None
 
 
